@@ -1,0 +1,53 @@
+MKDISK
+    >SIZE
+    >FIT
+    >UNIT
+    >PATH
+RMDISK
+    >PATH
+FDISK
+    >SIZE
+    >UNIT
+    >PATH
+    >TYPE
+    >FIT
+    >NAME
+MOUNT
+    >PATH
+    >NAME
+MKFS
+    >ID
+    >TYPE
+LOGIN
+    >USUARIO
+    >PASSWORD
+    >ID
+LOGOUT
+MKGRP
+    >NAME
+RMGRP
+    >NAME
+MKUSER
+    >USUARIO
+    >PWD
+    >GRP
+RMUSER
+    >USUARIO
+MKFILE
+    >PATH
+    >R
+    >SIZE
+    >COUNT
+MKDIR
+    >PATH
+    >P
+PAUSE
+REP
+    >NAME
+    >PATH
+    >ID
+    >RUTA
+______________________________________________________________________________
+
+MKDISK >SIZE=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/Disco1.dsk
+RMDISK >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/Disco1.dsk

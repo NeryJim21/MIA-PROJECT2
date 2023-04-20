@@ -1,4 +1,5 @@
 package analizador
+
 import (
 	"bufio"
 	"bytes"
@@ -178,24 +179,17 @@ func writeB(file *os.File, bytes []byte) {
 func rmdisk(paramm []string) {
 	// Variables de parametros
 	var (
-		path, confirma string
+		path string
 	)
 	// Obtenemos el path
 	piv := strings.Split(paramm[0], "=")
 	path = piv[1]
-	fmt.Println("Eliminar archivo...")
-	fmt.Println("S/N ")
-	fmt.Print("-> ")
-	fmt.Scanln(&confirma)
-	if confirma == "S" || confirma == "s" {
-		err := os.Remove(path)
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			fmt.Println("Disco eliminado con exito")
-		}
+	fmt.Println("Eliminando archivo...")
+	err := os.Remove(path)
+	if err != nil {
+		log.Fatal(err)
 	} else {
-		fmt.Println("Disco no eliminado")
+		fmt.Println("Disco eliminado con exito")
 	}
 }
 
@@ -208,169 +202,120 @@ func fdisk(paramm []string) {
 		piv                           []string
 		alerta                        bool
 	)
-	datos := Mbr{}
-	particion := Partition{}
 	// Obtenemos los valores de cada parametro
 	for i := 0; i < len(paramm); i++ {
 		piv = strings.Split(paramm[i], "=")
+		piv[0] = strings.ToUpper(piv[0])
 		if piv[0] == ">SIZE" {
 			size, _ = strconv.Atoi(piv[1])
-		}
-		if piv[0] == ">FIT" {
+		} else if piv[0] == ">FIT" {
 			fit = piv[1]
-		}
-		if piv[0] == ">UNIT" {
-			unit = piv[1]
-		}
-		if piv[0] == ">PATH" {
+		} else if piv[0] == ">UNIT" {
+			unit = strings.ToUpper(piv[1])
+		} else if piv[0] == ">PATH" {
 			path = piv[1]
-		}
-		if piv[0] == ">TYPE" {
-			tipo = piv[1]
-		}
-		if piv[0] == ">NAME" {
+		} else if piv[0] == ">TYPE" {
+			tipo = strings.ToUpper(piv[1])
+		} else if piv[0] == ">NAME" {
 			nombre = piv[1]
+		} else {
+			fmt.Println("Parametro incorrecto" + piv[0])
+			alerta = true
 		}
 	}
 	// Validamos comandos obligatorios
-	if size > 0 && path != "" && nombre != "" {
-		alerta = false
-		// Unidades
-		if unit == "B" {
-			pivS := strconv.Itoa(size)
-			copy(particion.Part_size[:], pivS)
-		} else if unit == "K" || unit == "" {
-			size = size * 1024
-			pivS := strconv.Itoa(size)
-			copy(particion.Part_size[:], pivS)
-		} else if unit == "M" {
-			size = size * (1024 * 1024)
-			pivS := strconv.Itoa(size)
-			copy(particion.Part_size[:], pivS)
-		} else {
-			fmt.Println("Valor de unidades incorrecta")
-			alerta = true
-		}
-		// Tipo de partición
-		if tipo == "" {
-			tipo = "P"
-			copy(particion.Part_type[:], tipo)
-		} else if tipo == "E" || tipo == "P" || tipo == "L" {
-			copy(particion.Part_type[:], tipo)
-		} else {
-			fmt.Println("Tipo de partición incorrecto")
-			alerta = true
-		}
-		// Ajuste
-		if fit == "" {
-			fit = "WF"
-			copy(particion.Part_fit[:], fit)
-		} else if fit == "FF" || fit == "BF" || fit == "WF" {
-			copy(particion.Part_fit[:], fit)
-		} else {
-			fmt.Println("Ajuste ingresado incorrectamente")
-			alerta = true
-		}
-	} else {
-		fmt.Println("No cumple con los parámetros obligatorios")
+	// Validando size mayor a 0
+	if size < 0 {
+		fmt.Println("Parametro SIZE debe ser mayor a cero")
+		alerta = true
 	}
-	//Terminando de llenar struct de partición
-	copy(particion.Part_name[:], nombre)
-	stt := "1"
-	copy(particion.Part_status[:], stt)
-	copy(particion.Part_start[:], nombre) // Modificar por valor real
-	// Buscando particiones disponibles
+	// Validando Tamaño partition
+	if unit == "B" {
+	}
+	if unit == "K" || unit == "" {
+		size = size * 1024
+	} else if unit == "M" {
+		size = size * (1024 * 1024)
+	} else {
+		fmt.Println("Unidades incorrectas")
+		alerta = true
+	}
+	// Tipo de partición
+	if tipo == "" {
+		tipo = "P"
+	}
+	if tipo != "E" && tipo != "P" && tipo != "L" {
+		fmt.Println("Tipo de partición incorrecto")
+		alerta = true
+	}
+	//Validando que no exista extendida
+	if tipo == "E" {
+		if findingExt(path) == true {
+			alerta = true
+			fmt.Println("Ya existe una partición extendida")
+		}
+	}
+	///Si viene type L, validamos que sí exista partición extendida
+	if tipo == "L" {
+		if findingExt(path) != true {
+			alerta = true
+			fmt.Println("No existe partición extendida para escribir particiones lógicas...")
+		}
+	}
+
+	// Ajuste
+	if fit == "" {
+		fit = "WF"
+	}
+	if fit != "FF" && fit != "BF" && fit != "WF" {
+		fmt.Println("Ajuste ingresado incorrectamente")
+		alerta = true
+	}
+
+	//Validando que el disco a modificar exista
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
+		alerta = true
+		fmt.Println("Disco no existente")
 	}
 	defer file.Close()
-	var mSize int = int(unsafe.Sizeof(datos))
-	data := readB(file, mSize)
-	buffer := bytes.NewBuffer(data)
-	err = binary.Read(buffer, binary.BigEndian, &datos) //Error
-	if err != nil {
-		log.Fatal("Falló lectura binaria", err)
-	}
-	// Escogiendo partición libre
-	pivSt := 0
-	partSt := string(datos.Mbr_partition_1.Part_status[:])
-	if partSt == "0" {
-		pivSt = 1
-	} else {
-		partSt = string(datos.Mbr_partition_2.Part_status[:])
-		if partSt == "0" {
-			pivSt = 2
-		} else {
-			partSt = string(datos.Mbr_partition_3.Part_status[:])
-			if partSt == "0" {
-				pivSt = 3
-			} else {
-				partSt = string(datos.Mbr_partition_4.Part_status[:])
-				if partSt == "0" {
-					pivSt = 4
-				} else {
-					alerta = true
-					fmt.Println("Particiones llenas")
-				}
-			}
-		}
-	}
-	//Validando nombre repetido
-	if string(datos.Mbr_partition_1.Part_name[:]) == nombre {
+
+	//Verificando que las particiones aún no están llenas
+	if partitionFull(path) == true {
 		alerta = true
+		fmt.Println("Particiones llenas")
 	}
-	if string(datos.Mbr_partition_2.Part_name[:]) == nombre {
+
+	//Verificando que el nombre no se repita
+	if namePartition(path, nombre) == true {
 		alerta = true
+		fmt.Println("El nombre: " + nombre + " ya ha sido ingresado a las particiones.")
 	}
-	if string(datos.Mbr_partition_3.Part_name[:]) == nombre {
-		alerta = true
-	}
-	if string(datos.Mbr_partition_4.Part_name[:]) == nombre {
-		alerta = true
-	}
-	//Validar particiones extendidas
-	if tipo == "E" {
-		if string(datos.Mbr_partition_1.Part_type[:]) == "E" {
-			alerta = true
-		}
-		if string(datos.Mbr_partition_2.Part_type[:]) == "E" {
-			alerta = true
-		}
-		if string(datos.Mbr_partition_3.Part_type[:]) == "E" {
-			alerta = true
-		}
-		if string(datos.Mbr_partition_4.Part_type[:]) == "E" {
-			alerta = true
-		}
-	}
-	//Validar particiones logicas
-	if tipo == "L" {
-		pivL1 := string(datos.Mbr_partition_1.Part_type[:])
-		pivL2 := string(datos.Mbr_partition_2.Part_type[:])
-		pivL3 := string(datos.Mbr_partition_3.Part_type[:])
-		pivL4 := string(datos.Mbr_partition_4.Part_type[:])
-		if pivL1 == "E" || pivL2 == "E" || pivL3 == "E" || pivL4 == "E" {
-			alerta = false
-		} else {
-			alerta = true
-			fmt.Println("No existe partición extendida para crear particiones lógicas")
-		}
-	}
+
 	//Creando partición
-	if !alerta {
-		switch pivSt {
-		case 1:
-			fmt.Println("Espacio en la partición 1")
-		case 2:
-			fmt.Println("Espacio en la partición 2")
-		case 3:
-			fmt.Println("Espacio en la partición 3")
-		case 4:
-			fmt.Println("Espacio en la partición 4")
-		default:
-			fmt.Println("Partición no disponible")
+	if alerta != true {
+		particion := Partition{}
+		status := "0"
+		//Agregando valores al struct Partition
+		copy(particion.Part_status[:], status)
+		copy(particion.Part_type[:], tipo)
+		copy(particion.Part_fit[:], fit)
+		copy(particion.Part_name[:], nombre)
+		pivS := strconv.Itoa(size)
+		copy(particion.Part_size[:], pivS)
+
+		//Enviando la información hacia el tipo de partición
+		if tipo == "P" {
+			makePrinary(path, particion)
+		} else if tipo == "E" {
+			makeExtended(path, particion)
+		} else if tipo == "L" {
+
 		}
+
+	} else {
+		fmt.Println("Error: la partición no ha sido creada")
 	}
 }
 
@@ -382,4 +327,77 @@ func readB(file *os.File, number int) []byte {
 		log.Fatal(err)
 	}
 	return bytes
+}
+
+//Función para validar si existe partición extendida
+func findingExt(path string) bool {
+	dataMBR := Mbr{}
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	if dataMBR.Mbr_partition_1.Part_type[0] != 'E' && dataMBR.Mbr_partition_2.Part_type[0] != 'E' && dataMBR.Mbr_partition_3.Part_type[0] != 'E' && dataMBR.Mbr_partition_4.Part_type[0] != 'E' {
+		return false
+	}
+	return true
+}
+
+//Función para validar si las particiones están llenas
+func partitionFull(path string) bool {
+	dataMBR := Mbr{}
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	if dataMBR.Mbr_partition_1.Part_status[0] != '-' || dataMBR.Mbr_partition_2.Part_status[0] != '-' || dataMBR.Mbr_partition_3.Part_status[0] != '-' || dataMBR.Mbr_partition_4.Part_status[0] != '-' {
+		return false
+	}
+	return true
+}
+
+//Función para validar que el nombre de la partición no se repita
+func namePartition(path string, nombre string) bool {
+	dataMBR := Mbr{}
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	if string(dataMBR.Mbr_partition_1.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_2.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_3.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_4.Part_name[:]) != nombre {
+		return false
+	}
+	return true
+}
+
+//Función para crear particiones primarias
+func makePrinary(path string, particion Partition) {
+
+}
+
+//Función para crear particiones primarias
+func makeExtended(path string, particion Partition) {
+
 }

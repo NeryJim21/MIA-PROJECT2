@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ func Command(command string) string {
 	command = strings.Replace(command, "\n", "", 1)
 	comando := strings.Split(command, " ")
 	paramm := comando[1:]
+	comando[0] = strings.ToUpper(comando[0])
 	//Llama metodos por comando
 	switch comando[0] {
 	case "MKDISK":
@@ -67,69 +69,78 @@ func GetCommand() {
 func mkdisk(paramm []string) {
 	// variables para parametros
 	var (
-		unit, path, fit, pivS string
+		unit, path, fit, pivP string
 		size                  int
 		piv                   []string
 		alerta                bool
 	)
-	datos := Mbr{}
 	// Obtenemos los valores de cada parametro
 	for i := 0; i < len(paramm); i++ {
 		piv = strings.Split(paramm[i], "=")
-		if piv[0] == ">SIZE" {
+		pivP = strings.TrimPrefix(piv[0], ">")
+		pivP = strings.ToUpper(pivP)
+
+		if pivP == "SIZE" {
 			size, _ = strconv.Atoi(piv[1])
-		}
-		if piv[0] == ">FIT" {
-			fit = piv[1]
-		}
-		if piv[0] == ">UNIT" {
-			unit = piv[1]
-		}
-		if piv[0] == ">PATH" {
+		} else if pivP == "FIT" {
+			fit = strings.ToUpper(piv[1])
+		} else if pivP == "UNIT" {
+			unit = strings.ToUpper(piv[1])
+		} else if pivP == "PATH" {
 			path = piv[1]
+		} else {
+			fmt.Println("Parametro incorrecto " + pivP)
+			alerta = true
 		}
 	}
 	// Validando parametros obligatorios
-	if path != "" && size > 0 {
-		alerta = false
-		// Unidades
-		if unit == "K" {
-			size = size * 1024
-			pivS = strconv.Itoa(size)
-			copy(datos.Mbr_tamano[:], pivS)
-		} else if unit == "M" || unit == "" {
-			size = size * (1024 * 1024)
-			pivS = strconv.Itoa(size)
-			copy(datos.Mbr_tamano[:], pivS)
-		} else {
-			fmt.Println("Valor de unidades incorrecta")
-			alerta = true
-		}
-		// Ajuste
-		if fit == "" {
-			fit = "FF"
-			copy(datos.Dsk_fit[:], fit)
-		} else if fit == "FF" || fit == "BF" || fit == "WF" {
-			copy(datos.Dsk_fit[:], fit)
-		} else {
-			fmt.Println("Ajuste ingresado incorrectamente")
-			alerta = true
-		}
-	} else {
-		fmt.Println("No cumple con los parámetros mínimos")
+	// Validando size mayor a 0
+	if size < 0 {
+		fmt.Println("Parametro SIZE debe ser mayor a cero")
 		alerta = true
 	}
-	// Terminando de llenar el Mbr
-	copy(datos.Mbr_fecha_creacion[:], hora())
-	copy(datos.Mbr_dsk_signature[:], random())
-	// Asignando Particiones vacías para control de FDISK
-	stt := "0"
-	copy(datos.Mbr_partition_1.Part_status[:], stt)
-	copy(datos.Mbr_partition_2.Part_status[:], stt)
-	copy(datos.Mbr_partition_3.Part_status[:], stt)
-	copy(datos.Mbr_partition_4.Part_status[:], stt)
+	//Validando que el path no venga vacío
+	if path == "" {
+		fmt.Println("Parametro PATH es requerido")
+		alerta = true
+	}
+	// Unidades
+	if unit == "K" {
+		size = size * 1024
+	} else if unit == "M" || unit == "" {
+		size = size * (1024 * 1024)
+	} else {
+		fmt.Println("Unidades incorrecta")
+		alerta = true
+	}
+	// Ajuste
+	if fit == "" {
+		fit = "FF"
+	}
+	if fit != "FF" && fit != "BF" && fit != "WF" {
+		fmt.Println("Ajuste ingresado incorrectamente")
+		alerta = true
+	}
+
 	// Creando disco
 	if !alerta {
+		dataMBR := Mbr{}
+		//Agregando valores a MBR
+		pivS := strconv.Itoa(size)
+		copy(dataMBR.Mbr_tamano[:], pivS)
+		copy(dataMBR.Mbr_fecha_creacion[:], hora())
+		copy(dataMBR.Mbr_dsk_signature[:], random())
+		copy(dataMBR.Dsk_fit[:], fit)
+		// Asignando Particiones vacías para control de FDISK
+		stt := "-"
+		copy(dataMBR.Mbr_partition_1.Part_status[:], stt)
+		copy(dataMBR.Mbr_partition_2.Part_status[:], stt)
+		copy(dataMBR.Mbr_partition_3.Part_status[:], stt)
+		copy(dataMBR.Mbr_partition_4.Part_status[:], stt)
+
+		//Validando/Creando carpetas
+		findingRuta(path)
+
 		file, err := os.Create(path)
 		if err != nil { // Valida que el disco esté vacío
 			log.Fatal(err)
@@ -146,8 +157,10 @@ func mkdisk(paramm []string) {
 		// Agregar Mbr a disco
 		file.Seek(0, 0) // Posiciona al inicio del archivo
 		var bufferMbr bytes.Buffer
-		binary.Write(&bufferMbr, binary.BigEndian, &datos)
+		binary.Write(&bufferMbr, binary.BigEndian, &dataMBR)
 		writeB(file, bufferMbr.Bytes())
+	} else {
+		fmt.Println("Disco no creado")
 	}
 }
 
@@ -197,29 +210,30 @@ func rmdisk(paramm []string) {
 func fdisk(paramm []string) {
 	// variables para parametros
 	var (
-		unit, path, fit, tipo, nombre string
-		size                          int
-		piv                           []string
-		alerta                        bool
+		unit, path, fit, tipo, nombre, pivP string
+		size                                int
+		piv                                 []string
+		alerta                              bool
 	)
 	// Obtenemos los valores de cada parametro
 	for i := 0; i < len(paramm); i++ {
 		piv = strings.Split(paramm[i], "=")
-		piv[0] = strings.ToUpper(piv[0])
-		if piv[0] == ">SIZE" {
+		pivP = strings.TrimPrefix(piv[0], ">")
+		pivP = strings.ToUpper(pivP)
+		if pivP == "SIZE" {
 			size, _ = strconv.Atoi(piv[1])
-		} else if piv[0] == ">FIT" {
-			fit = piv[1]
-		} else if piv[0] == ">UNIT" {
+		} else if pivP == "FIT" {
+			fit = strings.ToUpper(piv[1])
+		} else if pivP == "UNIT" {
 			unit = strings.ToUpper(piv[1])
-		} else if piv[0] == ">PATH" {
+		} else if pivP == "PATH" {
 			path = piv[1]
-		} else if piv[0] == ">TYPE" {
+		} else if pivP == "TYPE" {
 			tipo = strings.ToUpper(piv[1])
-		} else if piv[0] == ">NAME" {
+		} else if pivP == "NAME" {
 			nombre = piv[1]
 		} else {
-			fmt.Println("Parametro incorrecto" + piv[0])
+			fmt.Println("Parametro incorrecto" + pivP)
 			alerta = true
 		}
 	}
@@ -400,4 +414,30 @@ func makePrinary(path string, particion Partition) {
 //Función para crear particiones primarias
 func makeExtended(path string, particion Partition) {
 
+}
+
+//Función para buscar path
+func findingRuta(ruta string) {
+	err := crearRuta(ruta)
+	if err != nil {
+		fmt.Println(err)
+
+	}
+	//fmt.Println("La ruta ha sido creada correctamente")
+}
+
+//Función para crear path
+func crearRuta(ruta string) error {
+	_, err := os.Stat(ruta)
+	if os.IsNotExist(err) {
+		// La ruta no existe, se debe crear
+		err = os.MkdirAll(filepath.Dir(ruta), 0755)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		// Ocurrió un error al verificar la existencia de la ruta
+		return err
+	}
+	return nil
 }

@@ -49,5 +49,5 @@ REP
     >RUTA
 ______________________________________________________________________________
 
-MKDISK >SIZE=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/Disco1.dsk
+MKDISK >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
 RMDISK >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/Disco1.dsk

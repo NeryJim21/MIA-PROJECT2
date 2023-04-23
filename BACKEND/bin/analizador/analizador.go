@@ -37,6 +37,16 @@ type Partition struct {
 	Part_name   [20]byte
 }
 
+//Struct EBR
+type Ebr struct {
+	Part_status [1]byte
+	Part_fit    [2]byte
+	Part_start  int32
+	Part_size   int32
+	Part_next   int32
+	Part_name   [20]byte
+}
+
 // Separa comandos por línea
 func Command(command string) string {
 	command = strings.Replace(command, "\n", "", 1)
@@ -458,14 +468,76 @@ func makePrinary(path string, particion Partition) {
 	binary.Write(&bufferMbr, binary.BigEndian, &dataMBR)
 	writeB(file, bufferMbr.Bytes()) //Error acá
 	fmt.Println("MBR actualizado")
-
-	//Creando EBR inicial
-
 }
 
 //Función para crear particiones primarias
 func makeExtended(path string, particion Partition) {
+	dataMBR := Mbr{}
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	numPart := 0
+	if dataMBR.Mbr_partition_1.Part_status[0] == '-' {
+		numPart = 1
+	} else if dataMBR.Mbr_partition_2.Part_status[0] == '-' {
+		numPart = 2
+	} else if dataMBR.Mbr_partition_3.Part_status[0] == '-' {
+		numPart = 3
+	} else if dataMBR.Mbr_partition_4.Part_status[0] == '-' {
+		numPart = 4
+	}
+	fmt.Println(numPart)
+	//Primera partición en el disco
+	sizeMBR := int32(mSize + 1)
+	if numPart == 1 {
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_1 = particion
+	} else if numPart == 2 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_2 = particion
+	} else if numPart == 3 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size + dataMBR.Mbr_partition_2.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_3 = particion
+	} else if numPart == 4 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size + dataMBR.Mbr_partition_2.Part_size + dataMBR.Mbr_partition_3.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_4 = particion
+	}
+	//Actualizando MBR
+	file.Seek(0, 0) // Posiciona al inicio del archivo
+	var bufferMbr bytes.Buffer
+	binary.Write(&bufferMbr, binary.BigEndian, &dataMBR)
+	writeB(file, bufferMbr.Bytes())
+	fmt.Println("MBR actualizado")
 
+	//Creando EBR inicial
+	dataEBR := Ebr{}
+	statusEbr := "-"
+	copy(dataEBR.Part_status[:], statusEbr)
+	dataEBR.Part_fit = particion.Part_fit
+	dataEBR.Part_start = particion.Part_start
+	dataEBR.Part_size = particion.Part_size
+	dataEBR.Part_next = -1
+	dataEBR.Part_name = particion.Part_name
+
+	//Escribiendo EBR en el disco
+	sizeMBR++
+	file.Seek(int64(sizeMBR), os.SEEK_SET) // Posiciona al inicio del archivo
+	var bufferEbr bytes.Buffer
+	binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
+	writeB(file, bufferEbr.Bytes())
+	fmt.Println("EBR actualizado")
 }
 
 //Función para buscar path

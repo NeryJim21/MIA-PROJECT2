@@ -17,9 +17,9 @@ import (
 
 // Struct Mbr
 type Mbr struct {
-	Mbr_tamano         [10]byte
+	Mbr_tamano         int32
 	Mbr_fecha_creacion [20]byte
-	Mbr_dsk_signature  [10]byte
+	Mbr_dsk_signature  int32
 	Dsk_fit            [2]byte
 	Mbr_partition_1    Partition
 	Mbr_partition_2    Partition
@@ -32,8 +32,8 @@ type Partition struct {
 	Part_status [1]byte
 	Part_type   [1]byte
 	Part_fit    [2]byte
-	Part_start  [10]byte
-	Part_size   [10]byte
+	Part_start  int32
+	Part_size   int32
 	Part_name   [20]byte
 }
 
@@ -126,10 +126,9 @@ func mkdisk(paramm []string) {
 	if !alerta {
 		dataMBR := Mbr{}
 		//Agregando valores a MBR
-		pivS := strconv.Itoa(size)
-		copy(dataMBR.Mbr_tamano[:], pivS)
+		dataMBR.Mbr_tamano = int32(size)
 		copy(dataMBR.Mbr_fecha_creacion[:], hora())
-		copy(dataMBR.Mbr_dsk_signature[:], random())
+		dataMBR.Mbr_dsk_signature = random()
 		copy(dataMBR.Dsk_fit[:], fit)
 		// Asignando Particiones vacías para control de FDISK
 		stt := "-"
@@ -173,9 +172,9 @@ func hora() []byte {
 }
 
 // Id de disco
-func random() []byte {
+func random() int32 {
 	random := rand.Int()
-	b := []byte(strconv.Itoa(random))
+	b := int32(random)
 	fmt.Println("ID", random)
 	return b
 }
@@ -302,6 +301,10 @@ func fdisk(paramm []string) {
 	}
 
 	//Verificando que el nombre no se repita
+	if nombre == "" {
+		alerta = true
+		fmt.Println("Error, nombre requerido")
+	}
 	if namePartition(path, nombre) == true {
 		alerta = true
 		fmt.Println("El nombre: " + nombre + " ya ha sido ingresado a las particiones.")
@@ -316,8 +319,7 @@ func fdisk(paramm []string) {
 		copy(particion.Part_type[:], tipo)
 		copy(particion.Part_fit[:], fit)
 		copy(particion.Part_name[:], nombre)
-		pivS := strconv.Itoa(size)
-		copy(particion.Part_size[:], pivS)
+		particion.Part_size = int32(size)
 
 		//Enviando la información hacia el tipo de partición
 		if tipo == "P" {
@@ -379,7 +381,7 @@ func partitionFull(path string) bool {
 	if err != nil {
 		log.Fatal("Falló lectura binaria", err)
 	}
-	if dataMBR.Mbr_partition_1.Part_status[0] != '-' || dataMBR.Mbr_partition_2.Part_status[0] != '-' || dataMBR.Mbr_partition_3.Part_status[0] != '-' || dataMBR.Mbr_partition_4.Part_status[0] != '-' {
+	if dataMBR.Mbr_partition_1.Part_status[0] == '-' || dataMBR.Mbr_partition_2.Part_status[0] == '-' || dataMBR.Mbr_partition_3.Part_status[0] == '-' || dataMBR.Mbr_partition_4.Part_status[0] == '-' {
 		return false
 	}
 	return true
@@ -400,7 +402,7 @@ func namePartition(path string, nombre string) bool {
 	if err != nil {
 		log.Fatal("Falló lectura binaria", err)
 	}
-	if string(dataMBR.Mbr_partition_1.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_2.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_3.Part_name[:]) != nombre && string(dataMBR.Mbr_partition_4.Part_name[:]) != nombre {
+	if string(dataMBR.Mbr_partition_1.Part_name[:len(nombre)]) != nombre && string(dataMBR.Mbr_partition_2.Part_name[:len(nombre)]) != nombre && string(dataMBR.Mbr_partition_3.Part_name[:len(nombre)]) != nombre && string(dataMBR.Mbr_partition_4.Part_name[:len(nombre)]) != nombre {
 		return false
 	}
 	return true
@@ -408,6 +410,56 @@ func namePartition(path string, nombre string) bool {
 
 //Función para crear particiones primarias
 func makePrinary(path string, particion Partition) {
+	dataMBR := Mbr{}
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	numPart := 0
+	if dataMBR.Mbr_partition_1.Part_status[0] == '-' {
+		numPart = 1
+	} else if dataMBR.Mbr_partition_2.Part_status[0] == '-' {
+		numPart = 2
+	} else if dataMBR.Mbr_partition_3.Part_status[0] == '-' {
+		numPart = 3
+	} else if dataMBR.Mbr_partition_4.Part_status[0] == '-' {
+		numPart = 4
+	}
+	fmt.Println(numPart)
+	//Primera partición en el disco
+	sizeMBR := int32(mSize + 1)
+	if numPart == 1 {
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_1 = particion
+	} else if numPart == 2 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_2 = particion
+	} else if numPart == 3 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size + dataMBR.Mbr_partition_2.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_3 = particion
+	} else if numPart == 4 {
+		sizeMBR += dataMBR.Mbr_partition_1.Part_size + dataMBR.Mbr_partition_2.Part_size + dataMBR.Mbr_partition_3.Part_size
+		particion.Part_start = sizeMBR
+		dataMBR.Mbr_partition_4 = particion
+	}
+	//Actualizando MBR
+	file.Seek(0, 0) // Posiciona al inicio del archivo
+	var bufferMbr bytes.Buffer
+	binary.Write(&bufferMbr, binary.BigEndian, &dataMBR)
+	writeB(file, bufferMbr.Bytes()) //Error acá
+	fmt.Println("MBR actualizado")
+
+	//Creando EBR inicial
 
 }
 

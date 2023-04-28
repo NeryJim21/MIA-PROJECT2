@@ -17,9 +17,9 @@ import (
 
 // Struct Mbr
 type Mbr struct {
-	Mbr_tamano         int32
+	Mbr_tamano         int64
 	Mbr_fecha_creacion [20]byte
-	Mbr_dsk_signature  int32
+	Mbr_dsk_signature  int64
 	Dsk_fit            [2]byte
 	Mbr_partition_1    Partition
 	Mbr_partition_2    Partition
@@ -32,8 +32,8 @@ type Partition struct {
 	Part_status [1]byte
 	Part_type   [1]byte
 	Part_fit    [2]byte
-	Part_start  int32
-	Part_size   int32
+	Part_start  int64
+	Part_size   int64
 	Part_name   [20]byte
 }
 
@@ -41,9 +41,9 @@ type Partition struct {
 type Ebr struct {
 	Part_status [1]byte
 	Part_fit    [2]byte
-	Part_start  int32
-	Part_size   int32
-	Part_next   int32
+	Part_start  int64
+	Part_size   int64
+	Part_next   int64
 	Part_name   [20]byte
 }
 
@@ -136,7 +136,7 @@ func mkdisk(paramm []string) {
 	if !alerta {
 		dataMBR := Mbr{}
 		//Agregando valores a MBR
-		dataMBR.Mbr_tamano = int32(size)
+		dataMBR.Mbr_tamano = int64(size)
 		copy(dataMBR.Mbr_fecha_creacion[:], hora())
 		dataMBR.Mbr_dsk_signature = random()
 		copy(dataMBR.Dsk_fit[:], fit)
@@ -182,9 +182,9 @@ func hora() []byte {
 }
 
 // Id de disco
-func random() int32 {
+func random() int64 {
 	random := rand.Int()
-	b := int32(random)
+	b := int64(random)
 	fmt.Println("ID", random)
 	return b
 }
@@ -254,8 +254,7 @@ func fdisk(paramm []string) {
 	}
 	// Validando Tamaño partition
 	if unit == "B" {
-	}
-	if unit == "K" || unit == "" {
+	} else if unit == "K" || unit == "" {
 		size = size * 1024
 	} else if unit == "M" {
 		size = size * (1024 * 1024)
@@ -329,7 +328,7 @@ func fdisk(paramm []string) {
 		copy(particion.Part_type[:], tipo)
 		copy(particion.Part_fit[:], fit)
 		copy(particion.Part_name[:], nombre)
-		particion.Part_size = int32(size)
+		particion.Part_size = int64(size)
 
 		//Enviando la información hacia el tipo de partición
 		if tipo == "P" {
@@ -337,7 +336,13 @@ func fdisk(paramm []string) {
 		} else if tipo == "E" {
 			makeExtended(path, particion)
 		} else if tipo == "L" {
-
+			EBR := Ebr{}
+			copy(EBR.Part_status[:], status)
+			copy(EBR.Part_fit[:], fit)
+			copy(EBR.Part_name[:], nombre)
+			EBR.Part_size = int64(size)
+			EBR.Part_next = -1
+			makeLogic(path, EBR)
 		}
 
 	} else {
@@ -445,7 +450,7 @@ func makePrinary(path string, particion Partition) {
 	}
 	fmt.Println(numPart)
 	//Primera partición en el disco
-	sizeMBR := int32(mSize + 1)
+	sizeMBR := int64(mSize + 1)
 	if numPart == 1 {
 		particion.Part_start = sizeMBR
 		dataMBR.Mbr_partition_1 = particion
@@ -497,7 +502,7 @@ func makeExtended(path string, particion Partition) {
 	}
 	fmt.Println(numPart)
 	//Primera partición en el disco
-	sizeMBR := int32(mSize + 1)
+	sizeMBR := int64(mSize + 1)
 	if numPart == 1 {
 		particion.Part_start = sizeMBR
 		dataMBR.Mbr_partition_1 = particion
@@ -531,13 +536,120 @@ func makeExtended(path string, particion Partition) {
 	dataEBR.Part_next = -1
 	dataEBR.Part_name = particion.Part_name
 
+	fmt.Println("PS", dataEBR.Part_size)
+	fmt.Println(dataEBR.Part_start)
 	//Escribiendo EBR en el disco
 	sizeMBR++
+	fmt.Println("++", sizeMBR)
 	file.Seek(int64(sizeMBR), os.SEEK_SET) // Posiciona al inicio del archivo
 	var bufferEbr bytes.Buffer
 	binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
 	writeB(file, bufferEbr.Bytes())
 	fmt.Println("EBR actualizado")
+	fmt.Println("next", dataEBR.Part_next)
+	fmt.Println("size", dataEBR.Part_size)
+	fmt.Println("start", dataEBR.Part_start)
+}
+
+//Función para crear particiones lógicas
+func makeLogic(path string, EBR Ebr) {
+	//Leer el tamaño de la partición extendida
+	dataMBR := Mbr{}
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+	}
+	var sizeExtend, pivStart, start, acumulado int64
+	if dataMBR.Mbr_partition_1.Part_type[0] == 'E' {
+		sizeExtend = dataMBR.Mbr_partition_1.Part_size
+		pivStart = int64(unsafe.Sizeof(dataMBR)) + 1
+	} else if dataMBR.Mbr_partition_2.Part_type[0] == 'E' {
+		sizeExtend = dataMBR.Mbr_partition_2.Part_size
+		pivStart = dataMBR.Mbr_partition_2.Part_start
+	} else if dataMBR.Mbr_partition_3.Part_type[0] == 'E' {
+		sizeExtend = dataMBR.Mbr_partition_3.Part_size
+		pivStart = dataMBR.Mbr_partition_3.Part_start
+	} else if dataMBR.Mbr_partition_4.Part_type[0] == 'E' {
+		sizeExtend = dataMBR.Mbr_partition_4.Part_size
+		pivStart = dataMBR.Mbr_partition_4.Part_start
+	}
+	//Buscando EBR inicial
+	alerta := false
+	var dataEBR *Ebr
+	dataEBR = leerEBR(pivStart+1, path)
+
+	for dataEBR.Part_next != -1 {
+		//Siguiente EBR
+		acumulado = dataEBR.Part_size
+		dataEBR = leerEBR(int64(dataEBR.Part_next), path)
+	}
+	//Actualizando EBR y creando uno nuevo
+	start = dataEBR.Part_start + dataEBR.Part_size + int64(unsafe.Sizeof(Ebr))
+	//Validando que la partición quepa en la extendida
+	if dataEBR.Part_size <= (sizeExtend - acumulado) {
+		dataEBR.Part_next = start
+		file.Seek(start, os.SEEK_SET)
+		var bufferEbr bytes.Buffer
+		binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
+		fmt.Println("HOLA", bufferEbr)
+		writeB(file, bufferEbr.Bytes())
+	} else {
+		fmt.Println("No hay espacio suficiente para crear la partición lógica...")
+		fmt.Println(dataEBR.Part_size)
+		fmt.Println(sizeExtend - acumulado)
+		alerta = true
+	}
+
+	//Escribiendo nueva partición lógica
+	if alerta != true {
+		dataEBR.Part_size = EBR.Part_size
+		dataEBR.Part_start = start
+		dataEBR.Part_fit = EBR.Part_fit
+		dataEBR.Part_status = EBR.Part_status
+		dataEBR.Part_name = EBR.Part_name
+		dataEBR.Part_next = -1
+
+		file.Seek(start, os.SEEK_SET)
+		var bufferEbr bytes.Buffer
+		binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
+		writeB(file, bufferEbr.Bytes())
+		fmt.Println("Partición lógica creada...")
+		fmt.Println(dataEBR.Part_name)
+	}
+
+}
+
+//Lee EBR
+func leerEBR(next int64, path string) *Ebr {
+	myFile, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		fmt.Println("Error al abrir el archivo")
+		return nil
+	}
+	defer myFile.Close()
+
+	ebr := &Ebr{}
+	_, err = myFile.Seek(next, 0)
+	if err != nil {
+		fmt.Println("Error al buscar en el archivo")
+		return nil
+	}
+	err = binary.Read(myFile, binary.BigEndian, ebr)
+	if err != nil {
+		fmt.Println("Error al leer el archivo")
+		return nil
+	}
+
+	return ebr
 }
 
 //Función para buscar path

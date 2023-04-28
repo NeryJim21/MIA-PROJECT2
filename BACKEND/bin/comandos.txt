@@ -49,8 +49,9 @@ REP
     >RUTA
 ______________________________________________________________________________
 
-MKDISK >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
+MKDISK >size=10 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
 RMDISK >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
 
 fdisk >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Primary
 fdisk >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Extend >type=E
+fdisk >size=20 >UNIT=b >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Logic >type=L

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"p2/analizador"
 	"fmt"
+	"p2/analizador"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func menu() {
 	fmt.Println("\n\n\n ")
 
 	for {
-		fmt.Print("-> ")
+		fmt.Print("Ingrese comando \n-> ")
 		analizador.GetCommand()
 	}
 

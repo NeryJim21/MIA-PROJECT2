@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -61,10 +62,18 @@ func Command(command string) string {
 		rmdisk(paramm)
 	case "FDISK":
 		fdisk(paramm)
+	case "PAUSE":
+		commandPause()
+	case "EXIT":
+		os.Exit(0)
+	case "CLS":
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
 	default:
 		fmt.Println("Comando no reconocido")
 	}
-	return comando[0]
+	return "" //comando[0]
 }
 
 // Lee línea completa desde consolas
@@ -675,4 +684,11 @@ func crearRuta(ruta string) error {
 		return err
 	}
 	return nil
+}
+
+func commandPause() {
+	fmt.Print("Presiona Enter para continuar...")
+	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
+	os.Stdin.Read(make([]byte, 1))
+	fmt.Println()
 }

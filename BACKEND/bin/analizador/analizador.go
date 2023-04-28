@@ -555,7 +555,7 @@ func makeExtended(path string, particion Partition) {
 func makeLogic(path string, EBR Ebr) {
 	//Leer el tamaño de la partición extendida
 	dataMBR := Mbr{}
-	file, err := os.Open(path)
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -600,7 +600,6 @@ func makeLogic(path string, EBR Ebr) {
 		file.Seek(start, os.SEEK_SET)
 		var bufferEbr bytes.Buffer
 		binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
-		fmt.Println("HOLA", bufferEbr)
 		writeB(file, bufferEbr.Bytes())
 	} else {
 		fmt.Println("No hay espacio suficiente para crear la partición lógica...")
@@ -623,7 +622,7 @@ func makeLogic(path string, EBR Ebr) {
 		binary.Write(&bufferEbr, binary.BigEndian, &dataEBR)
 		writeB(file, bufferEbr.Bytes())
 		fmt.Println("Partición lógica creada...")
-		fmt.Println(dataEBR.Part_name)
+		fmt.Println(string(dataEBR.Part_name[:]))
 	}
 
 }

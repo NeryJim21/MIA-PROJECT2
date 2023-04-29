@@ -811,3 +811,51 @@ func mostrarMontadas() {
 		}
 	}
 }
+
+//Comando MKFS
+func commandMkfs(paramm []string) {
+	var (
+		pivP, id, tipo string
+		piv            []string
+		alerta         bool
+	)
+	// Obtenemos los valores de cada parametro
+	for i := 0; i < len(paramm); i++ {
+		piv = strings.Split(paramm[i], "=")
+		pivP = strings.TrimPrefix(piv[0], ">")
+		pivP = strings.ToUpper(pivP)
+		if pivP == "ID" {
+			id = strings.ToUpper(piv[1])
+		} else if pivP == "TYPE" {
+			tipo = strings.ToUpper(piv[1])
+		} else {
+			fmt.Println("Parametro incorrecto" + pivP)
+			alerta = true
+		}
+	}
+
+	//Verificando ID
+	i := 0
+	for i = 0; i < 10; i++ {
+		if montada[i].id == id {
+			break
+		}
+	}
+	if i == 10 {
+		alerta = true
+	}
+
+	//Validando tipo de formateo
+	if tipo == "" {
+		tipo = "FULL"
+	}
+	if tipo != "FULL" {
+		alerta = true
+	}
+
+	//Realizando formateo
+	if alerta != true {
+		fmt.Println("Formateando disco :D")
+	}
+
+}

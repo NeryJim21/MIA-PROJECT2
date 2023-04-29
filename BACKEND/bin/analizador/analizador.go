@@ -48,6 +48,16 @@ type Ebr struct {
 	Part_name   [20]byte
 }
 
+//Struct mount
+type particionMontada struct {
+	numero int
+	estado int
+	disco  int
+	nombre string
+	path   string
+	id     string
+}
+
 // Separa comandos por línea
 func Command(command string) string {
 	command = strings.Replace(command, "\n", "", 1)
@@ -62,6 +72,8 @@ func Command(command string) string {
 		rmdisk(paramm)
 	case "FDISK":
 		fdisk(paramm)
+	case "MOUNT":
+		commandMount(paramm)
 	case "PAUSE":
 		commandPause()
 	case "EXIT":
@@ -70,6 +82,8 @@ func Command(command string) string {
 		cmd := exec.Command("clear")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
+	case "MONTADAS":
+		mostrarMontadas()
 	default:
 		fmt.Println("Comando no reconocido")
 	}
@@ -691,4 +705,109 @@ func commandPause() {
 	exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
 	os.Stdin.Read(make([]byte, 1))
 	fmt.Println()
+}
+
+var montada [10]particionMontada
+
+//Función para montar particiones
+func commandMount(paramm []string) {
+	var (
+		path, name, pivP, nameD, partition string
+		id                                 = "81"
+		disco                              = 1
+		alerta                             bool
+		piv                                []string
+	)
+
+	// Obtenemos los valores de cada parametro
+	for i := 0; i < len(paramm); i++ {
+		piv = strings.Split(paramm[i], "=")
+		pivP = strings.TrimPrefix(piv[0], ">")
+		pivP = strings.ToUpper(pivP)
+		if pivP == "PATH" {
+			path = piv[1]
+		} else if pivP == "NAME" {
+			name = piv[1]
+		} else {
+			fmt.Println("Parametro incorrecto" + pivP)
+			alerta = true
+		}
+	}
+
+	//Validando que el disco exista
+	dataMBR := Mbr{}
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var mSize int = int(unsafe.Sizeof(dataMBR))
+	data := readB(file, mSize)
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.BigEndian, &dataMBR) //Error
+	if err != nil {
+		log.Fatal("Falló lectura binaria", err)
+		alerta = true
+	}
+	if string(dataMBR.Mbr_partition_1.Part_name[:len(name)]) == name {
+		partition = "a"
+	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
+		partition = "b"
+	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
+		partition = "c"
+	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
+		partition = "d"
+	} else {
+		fmt.Println("No existe la partición llamada ", name)
+		alerta = true
+	}
+
+	//Validando si existe espacio para montar disco
+	i := 0
+	for i = 0; i < 10; i++ {
+		if montada[i].path == path {
+			disco = montada[i].disco
+		}
+
+		if montada[i].estado == 0 {
+
+			break
+		}
+	}
+	if i == 10 {
+		fmt.Println("No hay espacio para montar otra partición")
+		alerta = true
+	}
+
+	//Montando partición
+	if alerta != true {
+		nameD = id + strconv.Itoa(disco) + partition
+		fmt.Println("Montando partición: ", nameD)
+		montada[i].numero = i + 1
+		montada[i].estado = 1
+		montada[i].disco = disco
+		montada[i].nombre = name
+		montada[i].path = path
+		montada[i].id = nameD
+
+		mostrarMontadas()
+	}
+
+}
+
+//Mostrando particiones montadas
+func mostrarMontadas() {
+	for i := 0; i < 10; i++ {
+		isMount := false
+		if montada[i].id != "" {
+			fmt.Println("\n - - - - - - - - - - P A R T I C I O N E S  M O N T A D A S - - - - - - - - -")
+			fmt.Println("Nombre: ", montada[i].nombre)
+			fmt.Println("ID: ", montada[i].id)
+			fmt.Println("Path: ", montada[i].path)
+			isMount = true
+		}
+		if i == 10 && isMount == false {
+			fmt.Println("No hay particiones montadas")
+		}
+	}
 }

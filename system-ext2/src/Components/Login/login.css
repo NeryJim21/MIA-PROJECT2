@@ -1,0 +1,11 @@
+#main-container {
+    place-items: center center;
+  }
+  
+  #sign-in-form {
+    max-width: 330px;
+  }
+  
+  .form-control:focus {
+    z-index: 5;
+  }

@@ -69,8 +69,6 @@ func LlenarListaDisco(ListaDiscos *list.List) {
 
 func RecorrerListaDisco(id string, ListaDiscos *list.List) (string, string, string) {
 	Id := strings.ReplaceAll(id, "81", "")
-	//NoParticion := Id[1:]
-	//IdDisco := Id[:1]
 	IdDisco := Id[1:]
 	pathDisco := ""
 	Part_name := ""
@@ -472,7 +470,6 @@ func EjecutarComandoMKDISK(nombreComando string, propiedadesTemp []Propiedad, co
 			mbr1.Particiones[i].Part_size = 0
 			copy(mbr1.Particiones[i].Part_name[:], "")
 		}
-		//com := "dd if=/dev/zero of=/home/edson/Escritorio/Proyecto/Proyecto1/dico1.disk count=1 bs=1M"
 		executeComand(comandos)
 		//Escribir MBR
 		f, err := os.OpenFile(propiedades[3], os.O_WRONLY, 0755)
@@ -531,9 +528,9 @@ func EjecutarComandoRMDISK(nombreComando string, propiedadesTemp []Propiedad) (P
 					return false
 				}
 				scanner := bufio.NewScanner(os.Stdin)
-				fmt.Print("¿Esta seguro de eliminar el disco? y/n >>")
+				fmt.Print("¿Esta seguro de eliminar el disco? s/n >>")
 				scanner.Scan()
-				if scanner.Text() == "y" {
+				if scanner.Text() == "s" {
 					executeComand("rm " + propiedadTemp.Val)
 					fmt.Println("¡Disco eliminado correctamente!")
 				} else {
@@ -646,12 +643,10 @@ func EjecutarComandoFDISK(nombreComando string, propiedadesTemp []Propiedad) (Pa
 			}
 			//Verificar si ya hay particiones
 			if BytesToString(Particiones[0].Part_status) == "1" {
-				//fmt.Println("Ya existe una particion")
 				for i := 0; i < 4; i++ {
 					//Posicion en bytes del partstar de la n particion
 					startPart += Particiones[i].Part_size
 					if BytesToString(Particiones[i].Part_status) == "0" {
-						//fmt.Println(startPart)
 						break
 					}
 				}
@@ -720,12 +715,10 @@ func EjecutarComandoFDISK(nombreComando string, propiedadesTemp []Propiedad) (Pa
 			}
 			//Verificar si ya hay particiones
 			if BytesToString(Particiones[0].Part_status) == "1" {
-				//fmt.Println("Ya existe una particion")
 				for i := 0; i < 4; i++ {
 					//Posicion en bytes del partstar de la n particion
 					startPart += Particiones[i].Part_size
 					if BytesToString(Particiones[i].Part_status) == "0" {
-						//fmt.Println(startPart)
 						break
 					}
 				}
@@ -764,7 +757,6 @@ func EjecutarComandoFDISK(nombreComando string, propiedadesTemp []Propiedad) (Pa
 		default:
 			fmt.Println("Ocurrio un error")
 		}
-		//ReadFile(propiedades[3])
 		return ParamValidos
 	} else {
 		ParamValidos = false
@@ -831,7 +823,6 @@ func EliminarParticion(path string, name string, typeDelete string) bool {
 					for {
 						if BytesPart_name(ebr.Part_name) == BytesPart_name(name2) {
 							fmt.Println("Particion Logica Encontrada")
-							//ReadFileEBR(path)
 							if strings.ToLower(typeDelete) == "fast" {
 								ebrAnterior.Part_next = ebr.Part_next
 								f.Seek(ebrAnterior.Part_start, 0)
@@ -841,7 +832,6 @@ func EliminarParticion(path string, name string, typeDelete string) bool {
 								ebrAnterior.Part_next = ebr.Part_next
 								f.Seek(ebrAnterior.Part_start, 0)
 								err = binary.Write(f, binary.BigEndian, ebrAnterior)
-								//ReadFileEBR(path)
 							}
 							Encontrada = true
 						}
@@ -890,16 +880,12 @@ func InicioParticionLogica(path string, ebr2 EBR) bool {
 
 				f.Seek(InicioExtendida, 0)
 				err = binary.Read(f, binary.BigEndian, &ebr)
-				//fmt.Println(ebr.Part_start)
-				//fmt.Println(ebr.Part_next)
 				return false
 			} else {
-				//fmt.Println("Part_start2")
 				f.Seek(InicioExtendida, 0)
 				err = binary.Read(f, binary.BigEndian, &ebr)
 				for {
 					if ebr.Part_next == -1 {
-						//fmt.Println("Es la ultima logica")
 						ebr.Part_next = ebr.Part_start + int64(unsafe.Sizeof(ebr)) + ebr2.Part_size
 						f.Seek(ebr.Part_start, 0)
 						err = binary.Write(f, binary.BigEndian, ebr)
@@ -907,14 +893,11 @@ func InicioParticionLogica(path string, ebr2 EBR) bool {
 						ebr2.Part_next = -1
 						f.Seek(ebr2.Part_start, 0)
 						err = binary.Write(f, binary.BigEndian, ebr2)
-						//fmt.Printf("NombreLogica: %s\n", ebr2.Part_name)
 						break
 					} else {
 						f.Seek(ebr.Part_next, 0)
 						err = binary.Read(f, binary.BigEndian, &ebr)
-						//fmt.Printf("NombreLogica: %s\n", ebr.Part_name)
 					}
-
 				}
 				return false
 			}
@@ -923,7 +906,6 @@ func InicioParticionLogica(path string, ebr2 EBR) bool {
 	if err != nil {
 		fmt.Println("No existe el archivo en la ruta")
 	}
-
 	return false
 }
 func HayExtendida(path string) bool {
@@ -945,7 +927,6 @@ func HayExtendida(path string) bool {
 	if err != nil {
 		fmt.Println("No existe el archivo en la ruta")
 	}
-
 	return false
 }
 
@@ -964,6 +945,7 @@ func ReadFile(path string) (funciona bool) {
 	}
 	return true
 }
+
 func HayEspacio(Part_sizeParticion int64, tamanioDisco int64) bool {
 	if ((Part_sizeParticion) > tamanioDisco) || (Part_sizeParticion < 0) {
 		fmt.Println("*ERROR: el tamanio de la particion es mayor al tamanio disponible del disco")
@@ -1005,9 +987,7 @@ func EjecutarComandoMount(nombreComando string, propiedadesTemp []Propiedad, Lis
 	}
 }
 func EjecutarReporteMount(ListaDiscos *list.List) {
-	fmt.Println(" 		 __________________________________________________________")
-	fmt.Println("		|__________________ Particiones Montadas __________________|")
-	fmt.Println("")
+	fmt.Println("\n - - - - - - - - - - P A R T I C I O N E S  M O N T A D A S - - - - - - - - -\n")
 	for element := ListaDiscos.Front(); element != nil; element = element.Next() {
 		var disco DISCO
 		disco = element.Value.(DISCO)
@@ -1107,7 +1087,6 @@ func ParticionMontar(ListaDiscos *list.List, Part_name string, nombreDisco strin
 			for i := 0; i < len(disco.Particiones); i++ {
 				var mountTemp = disco.Particiones[i]
 				if BytesToString(mountTemp.Estado) == "0" {
-					//mountTemp.Id = "vd" + BytesToString(disco.Id) + mountTemp.Id
 					mountTemp.Id = "81" + mountTemp.Id + BytesToString(disco.Id)
 					mountTemp.Part_name = Part_name
 					copy(mountTemp.Estado[:], "1")
@@ -1122,11 +1101,9 @@ func ParticionMontar(ListaDiscos *list.List, Part_name string, nombreDisco strin
 			element.Value = disco
 			break
 		} else if BytesToString(disco.Estado) == "1" && ExisteDisco(ListaDiscos, nombreDisco) && nombreDisco == disco.NombreDisco {
-			//fmt.Println("Otra particion montada en el disco ", BytesToString(disco.Id))
 			for i := 0; i < len(disco.Particiones); i++ {
 				var mountTemp = disco.Particiones[i]
 				if BytesToString(mountTemp.Estado) == "0" {
-					//mountTemp.Id = "vd" + BytesToString(disco.Id) + mountTemp.Id
 					mountTemp.Id = "81" + mountTemp.Id + BytesToString(disco.Id)
 					mountTemp.Part_name = Part_name
 					copy(mountTemp.Estado[:], "1")
@@ -1255,7 +1232,6 @@ func GraficarDisk(idParticion string, ListaDiscos *list.List, path string) bool 
 			ebr := EBR{}
 			err = binary.Read(f, binary.BigEndian, &ebr)
 			if ebr.Part_next == -1 {
-				//fmt.Println("No Hay particiones Logicas")
 			} else {
 				buffer.WriteString("\n<tr>")
 				var EspacioUtilizado int64 = 0
@@ -1302,7 +1278,6 @@ func GraficarTreeFull(idParticion string, pathCarpeta string, ruta string, Lista
 	var dos [15]byte
 	avd := AVD{}
 	var strArray [100]string
-	//var InicioParticion int64 =0
 	pathDisco, Part_name, _ := RecorrerListaDisco(idParticion, ListaDiscos)
 	sb, _ = DevolverSuperBlque(pathDisco, Part_name)
 	f, err := os.OpenFile(pathDisco, os.O_RDWR, 0755)
@@ -1519,10 +1494,7 @@ func ReporteFile(idParticion string, pathCarpeta string, ruta string, ListaDisco
 
 	contenidoFile := ""
 	carpetas := strings.Split(ruta, "/")
-	//fmt.Println("nameFile:")
 	nameFile := carpetas[len(carpetas)-1]
-	//fmt.Println(nameFile)
-
 	cont1 = 0
 	f.Seek(sb.Sb_ap_bloques, 0)
 	data := Bloque{}
@@ -1537,8 +1509,6 @@ func ReporteFile(idParticion string, pathCarpeta string, ruta string, ListaDisco
 		}
 	}
 
-	//fmt.Println("contentFile:")
-	//fmt.Println(contenidoFile)
 	buffer.WriteString("File " + "[shape=record, label=\"{" + nameFile + "| <f1> " + contenidoFile + "}}\"];\n")
 
 	//Crear Archivo
@@ -1696,8 +1666,6 @@ func ExecuteMKFS(id string, ListaDiscos *list.List) bool {
 		return false
 	}
 	Id := strings.ReplaceAll(id, "81", "")
-	//NoParticion := Id[1:]
-	//IdDisco := Id[:1]
 	IdDisco := Id[1:]
 	pathDisco := ""
 	Part_name := ""
@@ -1781,8 +1749,7 @@ func ExecuteMKFS(id string, ListaDiscos *list.List) bool {
 	superBloque.Sb_first_free_bit_detalle_directoriio = InicioBitmapDD
 	superBloque.Sb_dirst_free_bit_tabla_inodo = InicioBitmapInodo
 	superBloque.Sb_first_free_bit_bloques = InicioBitmapBloque
-	//superBloque.Sb_magic_num = 201701029
-	superBloque.Sb_magic_num = 201902308
+	superBloque.Sb_magic_num = 201700381
 	superBloque.InicioCopiaSB = InicioCopiaSB
 	superBloque.ConteoAVD = 0
 	superBloque.ConteoDD = 0
@@ -2023,12 +1990,10 @@ func CrearRaiz(pathDisco string, InicioParticion int64) bool {
 	bitLibre, _ = f.Seek(0, os.SEEK_CUR)
 	sb.Sb_first_free_bit_bloques = bitLibre
 	f.Seek(sb.Sb_ap_bloques, 0)
-	//usesTxt := []byte("1,G,root\n1,U,root,root,201902308\n")
 	usesTxt := []byte("1,G,root\n1,U,root,123\n")
 	for k := 0; k < int(cantidadBloque); k++ {
 		if k == 0 {
 			bloque := Bloque{}
-			//copy(bloque.Db_data[:], string([]byte(usesTxt[0:25])))
 			copy(bloque.Db_data[:], string([]byte(usesTxt)))
 			err = binary.Write(f, binary.BigEndian, &bloque)
 		} /*else {
@@ -2325,11 +2290,7 @@ func ExecuteMKDIR(id string, path string, p string, ListaDiscos *list.List) bool
 	/*
 	   Ejecutando MKDIR
 	*/
-	/*if p == ">p" {
-		pathDisco, Part_name, _ := RecorrerListaDisco(id, ListaDiscos)
-		RecorrePath(path, Part_name, pathDisco)
-		//CrearCarpeta(pathDisco,Part_name,path)
-	}*/
+
 	RecorrePath(path, Part_name, pathDisco)
 	fmt.Println("¡Directorio creado correctamente!")
 	return true
@@ -2358,7 +2319,6 @@ func RecorrePath(path string, Part_name string, pathDisco string) {
 				}
 			}
 		} else {
-			//mkdir >p -id->vda1 -path->/home/user6/nueva
 			for i := 1; i < len(carpetas); i++ {
 				if ExisteCarpeta(pathDisco, Part_name, carpetas[i]) == false {
 					if carpetas[i-1] == "" {
@@ -2366,14 +2326,12 @@ func RecorrePath(path string, Part_name string, pathDisco string) {
 					}
 					otroAvd, _ := ModificarCarpeta(pathDisco, Part_name, carpetas[i-1], "")
 					if otroAvd == true {
-						//fmt.Println("Necesita modificar el otro avd",noCarpeta2,carpetas[i-1])
 						ModificarCarpeta(pathDisco, Part_name, carpetas[i-1], carpetas[i-1])
 						CrearCarpeta(pathDisco, Part_name, carpetas[i])
 					} else {
 						CrearCarpeta(pathDisco, Part_name, carpetas[i])
 					}
 				} else {
-					//fmt.Println("Exite la carpeta","Hija",carpetas[i],"Padre",carpetas[i-1])
 				}
 			}
 		}
@@ -2411,7 +2369,6 @@ func ModificarCarpeta(pathDisco string, Part_name string, carpetaModificar strin
 	var nombre2 [15]byte
 	copy(nombre2[:], carpetaModificar)
 	var bitLibre int64
-	//var InicioParticion int64
 	sb, _ = DevolverSuperBlque(pathDisco, Part_name)
 	f, err := os.OpenFile(pathDisco, os.O_RDWR, 0755)
 	if err != nil {
@@ -2431,7 +2388,6 @@ func ModificarCarpeta(pathDisco string, Part_name string, carpetaModificar strin
 			for i := 0; i < len(avd.Avd_ap_array_subdirectoios); i++ {
 				if avd.Avd_ap_array_subdirectoios[i] == -1 {
 					avd.Avd_ap_array_subdirectoios[i] = sb.ConteoAVD + 1
-					//fmt.Println(avd.Avd_ap_array_subdirectoios,avd.Avd_ap_detalle_directorio)
 					puntero_avd = false
 					break
 				}
@@ -2500,7 +2456,6 @@ func CrearCarpeta(pathDisco string, Part_name string, carpetaHija string) bool {
 	defer f.Close()
 	var bitLibre int64 = 0
 	var bitLibreDD int64 = 0
-	//bitLibre,_:=f.Seek(0, os.SEEK_CUR)
 	f.Seek(sb.Sb_ap_arbol_directorio, 0)
 	for i := 0; i < int(sb.Sb_arbol_virtual_count); i++ {
 		err = binary.Read(f, binary.BigEndian, &avd)
@@ -2555,9 +2510,6 @@ func CrearCarpeta(pathDisco string, Part_name string, carpetaHija string) bool {
 					detalleDirectorioTemp.Dd_ap_detalle_directorio = -1
 					f.Seek(bitLibreDD, 0)
 					err = binary.Write(f, binary.BigEndian, &detalleDirectorioTemp)
-					/*for j:=0;j<5;j++{
-						fmt.Println(detalleDirectorioTemp.Dd_array_files[j].Dd_file_ap_inodo)
-					}*/
 					sb.Sb_detalle_directorio_free = sb.Sb_detalle_directorio_free - 1
 					bitLibreDD = 0
 					break
@@ -2610,7 +2562,6 @@ func EjecutarComandoMKFILE(nombreComando string, propiedadesTemp []Propiedad, Li
 			}
 		}
 		size, _ := strconv.Atoi(propiedades[2])
-		//ExecuteMKFILE(propiedades[0], propiedades[1], propiedades[2], size, ListaDiscos)
 		ExecuteMKFILE(globalIdLogin, propiedades[0], propiedades[1], size, ListaDiscos)
 		return ParamValidos
 	} else {
@@ -2695,7 +2646,6 @@ func CrearArchivo(pathDisco string, Part_name string, pathArchivo string, _p str
 		copy(bitacora.Log_tipo_operacion[:], "mkfile")
 		copy(bitacora.Log_tipo[:], "1")
 		copy(bitacora.Log_nombre[:], pathArchivo)
-		//copy(bitacora.Log_Contenido[:], contenido[1:len(contenido)-1])
 		copy(bitacora.Log_Contenido[:], contenido)
 		copy(bitacora.Log_fecha[:], dt.String())
 		bitacora.Size = int64(size)
@@ -2722,7 +2672,6 @@ func CrearArchivo(pathDisco string, Part_name string, pathArchivo string, _p str
 			for i := 0; i < 20; i++ {
 				err = binary.Read(f, binary.BigEndian, &dd)
 				if dd.Dd_ap_detalle_directorio != -1 && dd.Dd_ap_detalle_directorio != 0 {
-					//fmt.Println("------Correcto",dd.Dd_ap_detalle_directorio,i,dd.Ocupado)
 					siguienteDD = int(dd.Dd_ap_detalle_directorio)
 					bitLibre, _ = f.Seek(0, os.SEEK_CUR)
 					continue
@@ -2743,7 +2692,6 @@ func CrearArchivo(pathDisco string, Part_name string, pathArchivo string, _p str
 						err = binary.Write(f, binary.BigEndian, &dd)
 						bitLibre = 0
 						encontrado = true
-						//EscribirInodo(pathDisco, sb, contenido[1:len(contenido)-1], InicioParticion)
 						EscribirInodo(pathDisco, sb, contenido, InicioParticion)
 						break
 					} else if otroDD == true {
@@ -2797,7 +2745,6 @@ func EscribirDD(InicioDD int64, pathDisco string, cantidadDD int64, ddNuevo DD) 
 	for i := 0; i < int(cantidadDD); i++ {
 		err = binary.Read(f, binary.BigEndian, &dd)
 		if dd.Ocupado == 0 {
-			//fmt.Println("Se escribio",ddNuevo.Ocupado)
 			f.Seek(bitLibre, 0)
 			for h := 0; h < 5; h++ {
 				ddNuevo.Dd_array_files[h].Dd_file_ap_inodo = -1
@@ -2874,7 +2821,6 @@ func EscribirInodo(pathDisco string, sb SB, contenido string, InicioParticion in
 }
 
 func EscribirBloque(sb SB, cantidadBloque int64, pathDisco string, InicioParticion int64, inodo Inodo, contenido string) (Inodo, int64, int64, int64) {
-	//var contenido2 [25]byte
 	var contenido2 [64]byte
 	copy(contenido2[:], contenido)
 	bloqueTemp := Bloque{}

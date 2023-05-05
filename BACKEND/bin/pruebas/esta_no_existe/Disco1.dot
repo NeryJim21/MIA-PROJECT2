@@ -1,9 +1,0 @@
-digraph G{
-tbl [
-shape=box
-label=<
-<table border='0' cellborder='2' width='100' height="30" color='orange'>
-<tr><td height='30' width='75'> MBR </td><td height='30' width='75.0'>PRIMARIA <br/>Primary <br/> Ocupado: 11%</td><td height='30' width='75.0'>Libre</td><td height='30' width='75.0'>Libre</td><td height='30' width='75.0'>Libre</td><td height='30' width='75.0'>Libre: 88%</td>     </tr>
-</table>
->];
-}

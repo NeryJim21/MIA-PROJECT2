@@ -1,18 +1,7 @@
-pkg
-.lock
-pruebas
-/.dsk
-/.dot
-/.pdf
-
-
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dev
-.env
-
 # dependencies
-node_modules
+/node_modules
 /.pnp
 .pnp.js
 

@@ -1,6 +1,0 @@
-digraph grafica{
-rankdir=TB;
-node [shape = record, style=filled, fillcolor=orange];
-File [shape=record, label="{| <f1> }}"];
-
-}

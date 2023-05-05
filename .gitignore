@@ -1,2 +1,6 @@
 /pkg
 .lock
+/pruebas
+.dsk
+.dot
+.pdf

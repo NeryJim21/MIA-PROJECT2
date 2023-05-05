@@ -50,10 +50,28 @@ REP
 ______________________________________________________________________________
 
 MKDISK >size=10 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
+MKDISK >size=5 >UNIT=m >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe2/Disco2.dsk
 RMDISK >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk
 
 fdisk >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Primary
 fdisk >size=1 >UNIT=K >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Extend >type=E
 fdisk >size=20 >UNIT=b >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Logic >type=L
 
-mount >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Logic
+mount >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.dsk >name=Primary
+
+
+rep >id=811a >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/Disco1.pdf >name=disk
+
+rep >id=811a >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/tree.pdf >name=tree
+
+rep >id=811a >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/file.pdf >name=file
+
+rep >id=811a >PATH=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/sb.pdf >name=sb
+
+mkfs >id=811a >type=full
+
+login >user=root >pwd=123 >id=811a
+
+mkfile >size=15 >path=/home/n21/Documentos/USAC/MIA/LAB/PROYECTOS/PROYECTO2/repo/MIA-PROJECT2/BACKEND/bin/pruebas/esta_no_existe/a.txt >r
+
+mkdir >r >path=/home/user/docs/usac

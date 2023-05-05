@@ -58,6 +58,55 @@ type particionMontada struct {
 	id     string
 }
 
+//Struct Super Bloque
+type SB struct {
+	S_filesystem_type   int64
+	S_inodes_count      int64
+	S_blocks_count      int64
+	S_free_blocks_count int64
+	S_free_inodes_count int64
+	S_mtime             [20]byte
+	S_mnt_count         int64
+	S_magic             int64
+	S_inode_size        int64
+	S_block_size        int64
+	S_first_ino         int64
+	S_first_blo         int64
+	S_bm_inode_start    int64
+	S_bm_block_start    int64
+	S_inode_start       int64
+	S_block_start       int64
+}
+
+//Struct Inodo
+type Inodo struct {
+	I_uid   int64
+	I_gid   int64
+	I_size  int64
+	I_atime [20]byte
+	I_ctime [20]byte
+	I_mtime [20]byte
+	I_block int64
+	I_type  int64
+	I_perm  int64
+}
+
+//Struct Bloques de carpetas
+type BloqueCarpetas struct {
+	B_content [4]Content
+}
+
+//Struct Content
+type Content struct {
+	B_name  [20]byte
+	B_inodo int64
+}
+
+//Struct Bloques de archivos
+type BloqueArchivos struct {
+	B_content [4]Content
+}
+
 // Separa comandos por línea
 func Command(command string) string {
 	command = strings.Replace(command, "\n", "", 1)
@@ -224,17 +273,25 @@ func writeB(file *os.File, bytes []byte) {
 func rmdisk(paramm []string) {
 	// Variables de parametros
 	var (
-		path string
+		path, confirma string
 	)
 	// Obtenemos el path
 	piv := strings.Split(paramm[0], "=")
 	path = piv[1]
-	fmt.Println("Eliminando archivo...")
-	err := os.Remove(path)
-	if err != nil {
-		log.Fatal(err)
+	fmt.Println("Eliminar archivo...")
+	fmt.Println("S/N ")
+	fmt.Print("-> ")
+	fmt.Scanln(&confirma)
+	if confirma == "S" || confirma == "s" {
+		err := os.Remove(path)
+		if err != nil {
+			//log.Fatal(err)
+			fmt.Println("Error: No existe el disco")
+		} else {
+			fmt.Println("Disco eliminado con exito")
+		}
 	} else {
-		fmt.Println("Disco eliminado con exito")
+		fmt.Println("Disco no eliminado")
 	}
 }
 
@@ -750,13 +807,13 @@ func commandMount(paramm []string) {
 		alerta = true
 	}
 	if string(dataMBR.Mbr_partition_1.Part_name[:len(name)]) == name {
-		partition = "a"
+		partition = "A"
 	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
-		partition = "b"
+		partition = "B"
 	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
-		partition = "c"
+		partition = "C"
 	} else if string(dataMBR.Mbr_partition_2.Part_name[:len(name)]) == name {
-		partition = "d"
+		partition = "D"
 	} else {
 		fmt.Println("No existe la partición llamada ", name)
 		alerta = true
@@ -779,9 +836,20 @@ func commandMount(paramm []string) {
 		alerta = true
 	}
 
+	//Validando que la partición no esté montada
+	nameD = id + strconv.Itoa(disco) + partition
+	for j := 0; j < 10; j++ {
+		//fmt.Println(montada[j].id)
+		if montada[j].id == nameD {
+			fmt.Println("Error: Partición: ", name, " Ya ha sido montada")
+			alerta = true
+			break
+		}
+	}
+
 	//Montando partición
 	if alerta != true {
-		nameD = id + strconv.Itoa(disco) + partition
+
 		fmt.Println("Montando partición: ", nameD)
 		montada[i].numero = i + 1
 		montada[i].estado = 1
@@ -856,6 +924,10 @@ func commandMkfs(paramm []string) {
 	//Realizando formateo
 	if alerta != true {
 		fmt.Println("Formateando disco :D")
+		//Escribir ceros en el sistema
+		//Crear carpeta raíz
+		//Crear archivo user.txt
+
 	}
 
 }

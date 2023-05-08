@@ -4,7 +4,7 @@ const Reportes = () => {
 
     function verRep(){
         var obj = { 'cmd': 'Reporte' }
-            fetch(`http://18.191.10.110:5000/reports`, {
+            fetch(`http://localhost:5000/reports`, {
                 method: 'POST',
                 body: JSON.stringify(obj),
             })

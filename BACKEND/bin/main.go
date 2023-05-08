@@ -1332,6 +1332,7 @@ func GraficarDisk(idParticion string, ListaDiscos *list.List, path string) bool 
 	var datos string
 	datos = string(buffer.String())
 	CreateArchivo(path, datos)
+	reporte = path
 	fmt.Println("¡Reporte Disk creado exitosamente!")
 	return false
 }
@@ -1460,6 +1461,7 @@ func GraficarTreeFull(idParticion string, pathCarpeta string, ruta string, Lista
 	var datos string
 	datos = string(buffer.String())
 	CreateArchivo(pathCarpeta, datos)
+	reporte = pathCarpeta
 	fmt.Println("¡Reporte Tree creado exitosamente!")
 	return false
 }
@@ -1581,6 +1583,7 @@ func ReporteFile(idParticion string, pathCarpeta string, ruta string, ListaDisco
 	var datos string
 	datos = string(buffer.String())
 	CreateArchivo(pathCarpeta, datos)
+	reporte = pathCarpeta
 	fmt.Println("¡Reporte File creado exitosamente!")
 	return false
 }

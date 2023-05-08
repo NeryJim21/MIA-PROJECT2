@@ -4,18 +4,30 @@ import (
 	"bufio"
 	"bytes"
 	"container/list"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/rs/cors"
 )
+
+type cmdstruct struct {
+	Cmd string `json:"cmd"`
+}
+
+var reporte = ""
 
 //=============================== MAIN ===============================
 
@@ -23,9 +35,6 @@ import (
 func main() {
 	ListaDiscos := list.New()
 	LlenarListaDisco(ListaDiscos)
-	//LeerArchivo de Entrada
-	var comando string = ""
-	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("\n\n ")
 	fmt.Println("# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
 	fmt.Println("# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
@@ -37,17 +46,72 @@ func main() {
 	fmt.Println("# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
 	fmt.Println("# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
 	fmt.Println("\n\n\n ")
-	for comando != "exit" {
-		fmt.Println("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
-		fmt.Print("Ingrese comando \n-> ")
-		scanner.Scan()
-		comando = scanner.Text()
-		if comando != "" {
-			LeerTexto(comando, ListaDiscos)
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/ejecutar", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Ejecutando comando...")
+		w.Header().Set("Content-Type", "application/json")
+		var Content cmdstruct
+		respuesta := "Conectado"
+		body, _ := io.ReadAll(r.Body)
+		//fmt.Println(string(body))
+		json.Unmarshal(body, &Content)
+		//fmt.Println(Content)
+		//fmt.Println(Content.Cmd)
+		//respuesta = LeerTexto(Content.Cmd, ListaDiscos)
+		respuesta = ejecutar(Content.Cmd, ListaDiscos)
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result": "` + respuesta + `" }`))
+	})
+
+	mux.HandleFunc("/reports", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Println("BUSCANDO REPORTE")
+		fmt.Println(reporte)
+		fmt.Println("--------------------")
+		respuesta := ""
+		if reporte != "" {
+			bytes, err := ioutil.ReadFile(reporte)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			base64Encoding := ""
+			// Determine the content type of the image file
+			base64Encoding += "data:image/png;base64,"
+			base64Encoding += toBase64(bytes)
+
+			respuesta = base64Encoding
+
 		}
 
-	}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"result": "` + respuesta + `" }`))
+	})
+
+	fmt.Println("Server ON in port 5000")
+	handler := cors.Default().Handler(mux)
+	log.Fatal(http.ListenAndServe(":5000", handler))
 }
+
+func ejecutar(entrada string, ListaDiscos *list.List) string {
+	instrucciones := strings.Split(entrada, "\n")
+	fmt.Println("------------------------------Comienza--------------------------")
+	for i := 0; i < len(instrucciones); i++ {
+		if instrucciones[i] != "" && instrucciones[i] != "\n" {
+			fmt.Println(instrucciones[i])
+			LeerTexto(instrucciones[i], ListaDiscos)
+		}
+	}
+	return "Analizado"
+}
+
+func toBase64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 func LlenarListaDisco(ListaDiscos *list.List) {
 	IdDisco := [26]string{"a", "b", "c", "d", "e", "f", "g", "h", "i",
 		"j", "k", "l", "m", "n", "o", "p", "q",
@@ -271,7 +335,7 @@ var global string = ""
 var globalIdLogin string = ""
 
 //Funcion para leer y reconocer los comandos lleno la lista de comandos
-func LeerTexto(dat string, ListaDiscos *list.List) {
+func LeerTexto(dat string, ListaDiscos *list.List) string {
 	//Leendo la cadena de entrada
 	ListaComandos := list.New()
 	lineaComando := strings.Split(dat, "\n")
@@ -316,6 +380,7 @@ func LeerTexto(dat string, ListaDiscos *list.List) {
 		}
 	}
 	RecorrerListaComando(ListaComandos, ListaDiscos)
+	return "hola"
 }
 
 //Funcion para recorrer la Lista de Comandos
